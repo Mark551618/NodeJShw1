@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>書籍管理系統</title>
+  <style>
+    body {
+      background-image: url("/book.jpg"); /* 使用根目錄方式存取 */
+      background-size: cover; /* 讓背景填滿整個畫面 */
+      background-position: center; /* 讓圖片保持在畫面中央 */
+      background-repeat: no-repeat; /* 避免圖片重複 */
+      height: 100vh; /* 讓背景至少滿版 */
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* 讓內容置中 */
+      justify-content: center; /* 讓內容垂直居中 */
+      font-family: Arial, sans-serif; /* 設定字體 */
+    }
+
+    .newBook{
+      background: #d4c029;
+      padding: 10px;
+      margin: 5px;
+      text-align: center;
+      border-radius: 5px;
+      box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    #bookList {
+      list-style: disc;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* 讓清單在父容器內水平置中 */
+      width: 100%;
+      text-align: left;
+    }
+
+    /* 讓清單內每個項目格式統一 */
+    #bookList li {
+      background: #ffffff;
+      padding: 10px;
+      margin: 5px;
+      width: 50%; /* 控制寬度，讓內容不會太散 */
+      text-align: left; /* 讓書籍資訊靠左對齊 */
+      border-radius: 5px;
+      box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: left;
+      
+    }
+    
+    
+
+    #bookForm{
+      background: #d8b877;
+      padding: 10px;
+      margin: 5px;
+      text-align: center;
+      border-radius: 5px;
+      box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    li { margin-bottom: 10px; }
+    button { margin-left: 5px; }
+  </style>
+</head>
+<body>
+  <h1 class="newBook">新增書籍</h1>
+  <form id="bookForm">
+    <div>
+      <label for="title">書名：</label>
+      <input type="text" id="title" name="title" required>
+    </div>
+    <div>
+      <label for="author">作者：</label>
+      <input type="text" id="author" name="author" required>
+    </div>
+    <div>
+      <label for="pages">頁數：</label>
+      <input type="number" id="pages" name="pages" required>
+    </div>
+    <button type="submit">送出</button>
+  </form>
+
+  <h2 class="newBook">書籍列表</h2>
+  <ul id="bookList"></ul>
+
+  <script>
+    const form = document.getElementById('bookForm');
+    const bookList = document.getElementById('bookList');
+
+    // 新增書籍
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const author = document.getElementById('author').value;
+      const pages = document.getElementById('pages').value;
+
+      const response = await fetch('/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, author, pages })
+      });
+
+      if (response.ok) {
+        console.log('書籍新增成功');
+        fetchBooks();
+        form.reset();
+      } else {
+        console.error('新增書籍失敗');
+      }
+    });
+
+    // 取得所有書籍
+    async function fetchBooks() {
+      const response = await fetch('/books');
+      if (response.ok) {
+        const books = await response.json();
+        bookList.innerHTML = '';
+        books.forEach(book => {
+          const li = document.createElement('li');
+          li.textContent = `書名：${book.title}，作者：${book.author}，頁數：${book.pages}`;
+          
+          // 更新按鈕
+          const updateBtn = document.createElement('button');
+          updateBtn.textContent = '更新';
+          updateBtn.onclick = async () => {
+            const newTitle = prompt('請輸入新的書名', book.title);
+            const newAuthor = prompt('請輸入新的作者', book.author);
+            const newPages = prompt('請輸入新的頁數', book.pages);
+            if (newTitle && newAuthor && newPages) {
+              const res = await fetch(`/books/${book._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: newTitle, author: newAuthor, pages: newPages })
+              });
+              if (res.ok) {
+                console.log('書籍更新成功');
+                fetchBooks();
+              } else {
+                console.error('更新失敗');
+              }
+            }
+          };
+
+          // 刪除按鈕
+          const deleteBtn = document.createElement('button');
+          deleteBtn.textContent = '刪除';
+          deleteBtn.onclick = async () => {
+            if (confirm('確定要刪除這本書嗎？')) {
+              const res = await fetch(`/books/${book._id}`, { method: 'DELETE' });
+              if (res.ok) {
+                console.log('書籍刪除成功');
+                fetchBooks();
+              } else {
+                console.error('刪除失敗');
+              }
+            }
+          };
+
+          li.appendChild(updateBtn);
+          li.appendChild(deleteBtn);
+          bookList.appendChild(li);
+        });
+      }
+    }
+
+    // 初次載入書籍列表
+    fetchBooks();
+  </script>
+</body>
+</html>
